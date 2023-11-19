@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../wordscapesolver"
+		},
+		{
+			"path": "../qt6expts/code/qtsquares"
+		}
+	],
+	"settings": {}
+}
