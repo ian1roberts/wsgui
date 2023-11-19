@@ -13,7 +13,7 @@ config = {
             "wssgui",
             "wssgui.*",
         ]
-    ),
+    )
 }
 
 setup(**config)

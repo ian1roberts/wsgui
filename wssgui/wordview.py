@@ -1,18 +1,33 @@
 from PySide6.QtWidgets import (
+    QWidget,
     QLabel,
-    QGridLayout,
-    QTabWidget
+    QVBoxLayout,
+    QHBoxLayout,
+    QTabWidget,
+    QFrame,
+    QRadioButton
 )
+from PySide6.QtCore import Qt
 
 class WordArea(QTabWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.create_tabs()
 
-    def create_tabs(self):
-        self.layout = QGridLayout()
-        for i in range(2, 9):
-            cur_tab = QLabel(f"{i} letter words.")
-            self.addTab(cur_tab, f"{i} letter words.")
-        self.layout.addWidget(self, 0, 0)
+    def create_tabs(self, all_words):
+        for k, words in all_words.items():
+            cur_tab = QFrame()
+            cur_layout = QVBoxLayout()
+            cur_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+            for word in words:
+                row = QHBoxLayout()
+                word_button = QRadioButton()
+                word_label = QLabel(word)
+                row.addWidget(word_button)
+                row.addWidget(word_label)
+                cur_layout.addLayout(row)
+
+            cur_tab.setLayout(cur_layout)
+            self.addTab(cur_tab, f"{k} letter words.")
+
