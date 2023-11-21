@@ -6,7 +6,7 @@ from PySide6.QtGui import QPixmap
 
 class ImageArea(QWidget):
 
-    def __init__(self, size = 250, scale = 2.17) -> None:
+    def __init__(self, size = 200, scale = 2.17) -> None:
         super().__init__()
         self.container = QLabel("")
         self.container.setFixedHeight(size * scale)

@@ -4,7 +4,8 @@ from PySide6.QtWidgets import (
     QWidget,
     QGraphicsScene,
     QGraphicsView,
-    QGraphicsPixmapItem
+    QGraphicsPixmapItem,
+    QGraphicsPathItem
 )
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -13,6 +14,32 @@ import numpy as np
 
 FONT_FILE = Path( "c:") / "Windows" / "Fonts" / "arial.ttf"
 
+class MyQGPixmapItem(QGraphicsPixmapItem):
+    def __init__(self, img, i, n, alpha, center, radius):
+        super().__init__(img)
+        self.idx = i
+        self.alpha = alpha
+        self.half_width = self.boundingRect().width() / 2
+        self.half_height = self.boundingRect().height() / 2
+        self.center_x = center.x()
+        self.center_y = center.y()
+        self.radius = radius
+        self.angle = 2 * math.pi * i / n
+        self.hit = False
+
+    def calc_position(self,  r = False, offset = False):
+        if not r:
+            r = self.radius
+        x = self.center_x + r * math.cos(self.angle)
+        if not offset:
+            x -= self.half_width
+        y = self.center_y + r * math.sin(self.angle)
+        if not offset:
+            y -= self.half_height
+        if not offset:
+            self.setPos(x, y)
+        else:
+            self.offset_xy = QPointF(x, y)
 
 class LetterArea(QWidget):
 
@@ -21,11 +48,12 @@ class LetterArea(QWidget):
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene)
         self.center = QPointF(50, 50)
-        self.radius = 50
+        self.radius = 80
+        self.last_path = False
         self.get_letters()
 
     def create_letter_img(self, char, fnt_file = FONT_FILE):
-        fnt = ImageFont.truetype(str(fnt_file), size = 32)
+        fnt = ImageFont.truetype(str(fnt_file), size = 24)
         l, t, r, b = fnt.getbbox(char)
         h = b - t
         w = r - l
@@ -45,29 +73,42 @@ class LetterArea(QWidget):
                         alpha in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"}
 
     def make_word(self, word):
-        def _get_position(l):
-            start_pos_x = l.x()
-            start_pos_y = l.y()
-            start_height =  l.boundingRect().height()
-            start_width =  l.boundingRect().width()
-            x = start_pos_x + (start_width / 2)
-            y = start_pos_y + (start_height / 2)
-            return(QPointF(x, y))
+        letters = [MyQGPixmapItem(
+                self.letters[alpha], i, len(word), alpha, self.center,
+                self.radius) for i, alpha in enumerate(word)]
 
-        letters = [QGraphicsPixmapItem(self.letters[alpha])
-                   for alpha in word]
-        for i, letter in enumerate(letters):
-            angle = 2 * math.pi * i / len(word)
-            x = (self.center.x() + self.radius * math.cos(angle) -
-                 letter.boundingRect().width() / 2)
-            y = (self.center.y() + self.radius * math.sin(angle) -
-                 letter.boundingRect().height() / 2)
-            letter.setPos(x, y)
+        for letter in letters:
+            letter.calc_position()
+            letter.calc_position(r = self.radius - 15,
+                                 offset = True)
             self.scene.addItem(letter)
 
         path = QPainterPath()
-        path.moveTo(_get_position(letters[0]))
+        path.moveTo(letters[0].offset_xy)
         for letter in letters:
-            path.lineTo(_get_position(letter))
+            path.lineTo(letter.offset_xy)
         path.closeSubpath()
         self.scene.addPath(path, QPen(Qt.red, 3))
+        self.wheel = letters
+
+    def word_path(self, word):
+        tmp_letters = self.wheel.copy()
+        selected = list()
+        for w in word:
+            for x in tmp_letters:
+                if (x.alpha == w) and (not x.hit):
+                    x.hit = True
+                    selected.append(x)
+                    break
+        
+        path = QPainterPath()
+        path.moveTo(selected[0].offset_xy)
+        for letter in selected[1:]:
+            path.lineTo(letter.offset_xy)
+        path_item = QGraphicsPathItem(path)
+        path_item.setPen(QPen(Qt.blue, 3))
+        self.scene.addItem(path_item)
+        for x in self.wheel:
+            x.hit = False
+        self.last_path = path_item
+

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 from PySide6.QtGui import QAction
-
+from PySide6.QtCore import Qt
 from wssgui.imageview import ImageArea
 from wssgui.wordview import WordArea
 from wssgui.letter_wheel import LetterArea
@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("WordscapeSolver GUI")
-        self.setGeometry(50, 50, 600, 900)
+        self.setGeometry(30, 30, 600, 800)
 
         # Create menus and Status
         self.gen_menubar()
@@ -91,13 +91,23 @@ class MainWindow(QMainWindow):
     def create_buttons(self):
         self._button_box = QGroupBox("Controls")
         layout = QGridLayout()
+        layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
         cmds = {"Load Image": self.file_load_image,
                 "Analyse": self.analyse_calculate,
-                "Highlight":self.analyse_display}
-        for cmd in cmds:
+                "Highlight":self.analyse_display,
+                "Clear": self.analyse_clear,
+                "Quit": QApplication.quit}
+        
+        col = -1
+        for i, cmd in enumerate(cmds):
+            col += 1
+            row = 0
             butt = QPushButton(cmd)
             butt.clicked.connect(cmds[cmd])
-            layout.addWidget(butt)
+            if i % 2 == 1:
+                row = 1
+                col -= 1
+            layout.addWidget(butt, row, col)
 
         self._button_box.setLayout(layout)
         print("Created button panel")
@@ -146,8 +156,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         # Combine image and letter wheel
         left_vlay = QVBoxLayout()
-        left_vlay.addWidget(self._image_view_box, stretch = 1)
-        left_vlay.addWidget(self._letter_view_box, stretch = 2)
+        left_vlay.addWidget(self._image_view_box, stretch = 2)
+        left_vlay.addWidget(self._letter_view_box, stretch = 1)
         # Combine Found Words and Buttons
         right_vlay = QVBoxLayout()
         right_vlay.addWidget(self._word_view_box, stretch = 2)
@@ -192,7 +202,15 @@ class MainWindow(QMainWindow):
 
 
     def analyse_display(self):
-        pass
+        idx = self.word_area.currentIndex()
+        cur_word = self.word_area.selected_word[idx].text()
+        self.gen_statusbar(cur_word)
+        self.letter_area.word_path(cur_word)
+
+    def analyse_clear(self):
+        last_path = self.letter_area.last_path
+        if last_path:
+            self.letter_area.scene.removeItem(last_path)
 
     def help_about(self):
         pass
