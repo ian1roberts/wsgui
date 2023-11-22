@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import (
-    QWidget,
     QLabel,
     QVBoxLayout,
     QHBoxLayout,
@@ -13,7 +12,7 @@ class WordArea(QTabWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.selected_word = list()
+        self.selected_word: list = list()
 
     def create_tabs(self, all_words):
         for i, (k, words) in enumerate(all_words.items()):

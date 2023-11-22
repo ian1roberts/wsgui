@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt # type: ignore
 from wssgui.imageview import ImageArea
 from wssgui.wordview import WordArea
 from wssgui.letter_wheel import LetterArea
@@ -69,8 +69,6 @@ class MainWindow(QMainWindow):
         self.image_area = ImageArea()
         layout.addWidget(self.image_area.container)
         self._image_view_box.setLayout(layout)
-        print("Created image panel")
-
 
     def create_letter_wheel(self):
         self._letter_view_box = QGroupBox("Letter Wheel")
@@ -78,7 +76,6 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(self.letter_area.view)
         self._letter_view_box.setLayout(layout)
-        print("Created letter view panel")
 
     def create_word_view_panel(self):
         self._word_view_box = QGroupBox("Found Words")
@@ -86,9 +83,9 @@ class MainWindow(QMainWindow):
         self.word_area = WordArea()
         layout.addWidget(self.word_area)
         self._word_view_box.setLayout(layout)
-        print("Created image panel")
 
     def create_buttons(self):
+        self.buttons = dict()
         self._button_box = QGroupBox("Controls")
         layout = QGridLayout()
         layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
@@ -103,15 +100,16 @@ class MainWindow(QMainWindow):
             col += 1
             row = 0
             butt = QPushButton(cmd)
+            if i > 0 and i < 4:
+                butt.setEnabled(False)
             butt.clicked.connect(cmds[cmd])
             if i % 2 == 1:
                 row = 1
                 col -= 1
             layout.addWidget(butt, row, col)
+            self.buttons[cmd] = butt
 
         self._button_box.setLayout(layout)
-        print("Created button panel")
-
 
     def gen_menubar(self):
         file_menu = self.menuBar().addMenu('&File')
@@ -180,6 +178,7 @@ class MainWindow(QMainWindow):
             self.image_area.load_image(file_name)
             self.image_area.container.show()
             self.image_file_name = file_name
+            self.buttons["Analyse"].setEnabled(True)
         else:
             self.close()
 
@@ -199,13 +198,18 @@ class MainWindow(QMainWindow):
         observed = ResultsParse(result.output.split("\n"))
         self.letter_area.make_word(observed.letters)
         self.word_area.create_tabs(observed.words)
-
+        self.buttons["Highlight"].setEnabled(True)
+        self.buttons["Clear"].setEnabled(True)
 
     def analyse_display(self):
         idx = self.word_area.currentIndex()
+        if idx < 0:
+            return
         cur_word = self.word_area.selected_word[idx].text()
-        self.gen_statusbar(cur_word)
-        self.letter_area.word_path(cur_word)
+        if cur_word:
+            self.analyse_clear()
+            self.gen_statusbar(cur_word)
+            self.letter_area.word_path(cur_word)
 
     def analyse_clear(self):
         last_path = self.letter_area.last_path
