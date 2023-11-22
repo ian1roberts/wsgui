@@ -15,7 +15,7 @@ from wssgui.imageview import ImageArea
 from wssgui.wordview import WordArea
 from wssgui.letter_wheel import LetterArea
 from click.testing import CliRunner
-from wordscapesolver.cli.solveit import solveit
+from wordscapesolver.cli.solveit import solveit # type: ignore
 
 class ResultsParse(object):
     def __init__(self, output):
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
                 "Highlight":self.analyse_display,
                 "Clear": self.analyse_clear,
                 "Quit": QApplication.quit}
-        
+
         col = -1
         for i, cmd in enumerate(cmds):
             col += 1

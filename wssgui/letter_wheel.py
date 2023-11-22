@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QGraphicsPathItem
 )
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont # type: ignore
 import math
 import numpy as np
 
@@ -100,7 +100,7 @@ class LetterArea(QWidget):
                     x.hit = True
                     selected.append(x)
                     break
-        
+
         path = QPainterPath()
         path.moveTo(selected[0].offset_xy)
         for letter in selected[1:]:
@@ -111,4 +111,3 @@ class LetterArea(QWidget):
         for x in self.wheel:
             x.hit = False
         self.last_path = path_item
-
