@@ -38,3 +38,8 @@ class WordArea(QTabWidget):
     def update_label(self, i, word_label, checked):
         if checked:
             self.selected_word[i].setText(word_label.text())
+
+    def clear(self):
+        for i in reversed(range(self.count())):
+            self.removeTab(i)
+            self.selected_word.pop()

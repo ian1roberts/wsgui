@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.buttons = dict()
         self.setWindowTitle("WordscapeSolver GUI")
         self.setGeometry(30, 30, 600, 800)
 
@@ -85,7 +86,6 @@ class MainWindow(QMainWindow):
         self._word_view_box.setLayout(layout)
 
     def create_buttons(self):
-        self.buttons = dict()
         self._button_box = QGroupBox("Controls")
         layout = QGridLayout()
         layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
@@ -172,6 +172,14 @@ class MainWindow(QMainWindow):
         pass
 
     def file_load_image(self):
+        if self.image_area.loaded:
+            for i, (_, butt) in enumerate(self.buttons.items()):
+                if i > 0 and i < 4:
+                    butt.setEnabled(False)
+            self.image_area.reset()
+            self.letter_area.clear()
+            self.word_area.clear()
+
         file_name, _ = QFileDialog.getOpenFileName(
             self, "Select Image", "", "PNG Files (*.png)")
         if file_name:
@@ -181,7 +189,7 @@ class MainWindow(QMainWindow):
             self.buttons["Analyse"].setEnabled(True)
         else:
             self.close()
-
+        
     def file_loaddir_image(self):
         pass
 
@@ -212,9 +220,9 @@ class MainWindow(QMainWindow):
             self.letter_area.word_path(cur_word)
 
     def analyse_clear(self):
-        last_path = self.letter_area.last_path
-        if last_path:
-            self.letter_area.scene.removeItem(last_path)
+        if self.letter_area.last_path:
+            self.letter_area.deselect()
+            
 
     def help_about(self):
         pass

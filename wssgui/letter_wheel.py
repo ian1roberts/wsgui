@@ -111,3 +111,11 @@ class LetterArea(QWidget):
         for x in self.wheel:
             x.hit = False
         self.last_path = path_item
+
+    def clear(self):
+        self.scene.clear()
+        self.last_path = False
+
+    def deselect(self):
+        self.scene.removeItem(self.last_path)
+        self.last_path = False
