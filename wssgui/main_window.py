@@ -10,10 +10,11 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt # type: ignore
+from PySide6.QtCore import Qt, Signal, Property # type: ignore
 from wssgui.imageview import ImageArea
 from wssgui.wordview import WordArea
 from wssgui.letter_wheel import LetterArea
+from wssgui.make_words import MakeWordArea
 from click.testing import CliRunner
 from wordscapesolver.cli.solveit import solveit # type: ignore
 
@@ -47,6 +48,8 @@ class ResultsParse(object):
 
 class MainWindow(QMainWindow):
 
+    valueChanged = Signal(str)
+
     def __init__(self):
         super().__init__()
         self.buttons = dict()
@@ -61,8 +64,28 @@ class MainWindow(QMainWindow):
         self.create_image_view_panel()
         self.create_letter_wheel()
         self.create_word_view_panel()
+        self.create_make_word_panel()
         self.create_buttons()
         self.gen_mainview()
+
+        # Mouse selected Letter
+        self._value = ""
+        self.valueChanged.connect(lambda alpha: self.make_word_area.add_letter(alpha))
+        self.letter_area.view.mouseOverWidget.connect(lambda x: self.change_value(x.alpha))   
+
+    @Property(str, notify = valueChanged)
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, new_value):
+        if self._value != new_value:
+            self._value = new_value
+            self.valueChanged.emit(new_value)
+
+    def change_value(self, alpha):
+        self.value = alpha
+        
 
     def create_image_view_panel(self):
         self._image_view_box = QGroupBox("Puzzle Image")
@@ -73,10 +96,17 @@ class MainWindow(QMainWindow):
 
     def create_letter_wheel(self):
         self._letter_view_box = QGroupBox("Letter Wheel")
-        self.letter_area = LetterArea()
+        self.letter_area = LetterArea(self)
         layout = QVBoxLayout()
         layout.addWidget(self.letter_area.view)
         self._letter_view_box.setLayout(layout)
+
+    def create_make_word_panel(self):
+        self._make_word_view_box = QGroupBox("Make Words")
+        self.make_word_area = MakeWordArea(self)
+        layout = QVBoxLayout()
+        layout.addWidget(self.make_word_area.view)
+        self._make_word_view_box.setLayout(layout)
 
     def create_word_view_panel(self):
         self._word_view_box = QGroupBox("Found Words")
@@ -158,7 +188,8 @@ class MainWindow(QMainWindow):
         left_vlay.addWidget(self._letter_view_box, stretch = 1)
         # Combine Found Words and Buttons
         right_vlay = QVBoxLayout()
-        right_vlay.addWidget(self._word_view_box, stretch = 2)
+        right_vlay.addWidget(self._word_view_box, stretch = 1)
+        right_vlay.addWidget(self._make_word_view_box, stretch = 1)
         right_vlay.addWidget(self._button_box, stretch = 1)
         # Put main view together
         layout = QHBoxLayout(central_widget)

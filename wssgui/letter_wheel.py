@@ -1,11 +1,13 @@
 from PySide6.QtGui import QPixmap, QPainterPath, QPen, QImage
-from PySide6.QtCore import Qt, QPointF
+from PySide6.QtCore import Qt, QPointF, Signal
 from PySide6.QtWidgets import (
     QWidget,
     QGraphicsScene,
     QGraphicsView,
     QGraphicsPixmapItem,
-    QGraphicsPathItem
+    QGraphicsPathItem,
+    QGraphicsSceneMouseEvent
+    
 )
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont # type: ignore
@@ -15,7 +17,8 @@ import numpy as np
 FONT_FILE = Path( "c:") / "Windows" / "Fonts" / "arial.ttf"
 
 class MyQGPixmapItem(QGraphicsPixmapItem):
-    def __init__(self, img, i, n, alpha, center, radius):
+
+    def __init__(self, img, i, n, alpha, center, radius, parent):
         super().__init__(img)
         self.idx = i
         self.alpha = alpha
@@ -26,6 +29,10 @@ class MyQGPixmapItem(QGraphicsPixmapItem):
         self.radius = radius
         self.angle = 2 * math.pi * i / n
         self.hit = False
+        self.parent = parent
+
+    def __str__(self) -> str:
+        return f" {self.alpha} @ ({self.x()}, {self.y()})"
 
     def calc_position(self,  r = False, offset = False):
         if not r:
@@ -41,15 +48,46 @@ class MyQGPixmapItem(QGraphicsPixmapItem):
         else:
             self.offset_xy = QPointF(x, y)
 
+class LetterAreaView(QGraphicsView):
+    mouseOverWidget = Signal(QWidget)
+
+    def __init__(self, scene):
+        super().__init__(scene)
+        self.mouse_pressed = False
+        self.selected_widgets = set()
+
+    def mousePressEvent(self, event):
+        self.mouse_pressed = True
+        widget = self.itemAt(event.pos())
+        if isinstance(widget, MyQGPixmapItem):
+            if widget and widget not in self.selected_widgets:
+                self.selected_widgets.add(widget)
+                self.mouseOverWidget.emit(widget)
+
+    def mouseMoveEvent(self, event):
+        if self.mouse_pressed:
+            widget = self.itemAt(event.pos())
+            if isinstance(widget, MyQGPixmapItem):
+                if widget and widget not in self.selected_widgets:
+                    self.selected_widgets.add(widget)
+                    self.mouseOverWidget.emit(widget)
+
+    def mouseReleaseEvent(self, event):
+        print(f"Mouse released: {[str(x) for x in self.selected_widgets]}")
+        self.selected_widgets.clear()
+        self.mouse_pressed = False
+
 class LetterArea(QWidget):
 
-    def __init__(self) -> None:
+    def __init__(self, parent):
         super().__init__()
+
         self.scene = QGraphicsScene()
-        self.view = QGraphicsView(self.scene)
+        self.view = LetterAreaView(self.scene)
         self.center = QPointF(50, 50)
         self.radius = 80
         self.last_path = False
+        self.selected_alpha = parent
         self.get_letters()
 
     def create_letter_img(self, char, fnt_file = FONT_FILE):
@@ -75,7 +113,7 @@ class LetterArea(QWidget):
     def make_word(self, word):
         letters = [MyQGPixmapItem(
                 self.letters[alpha], i, len(word), alpha, self.center,
-                self.radius) for i, alpha in enumerate(word)]
+                self.radius, self.selected_alpha) for i, alpha in enumerate(word)]
 
         for letter in letters:
             letter.calc_position()
@@ -119,3 +157,9 @@ class LetterArea(QWidget):
     def deselect(self):
         self.scene.removeItem(self.last_path)
         self.last_path = False
+
+    def valid_word(self, widget):
+        print(f"Current word: {widget.alpha}")
+        print(" ".join([x.alpha for x in list(self.view.selected_widgets)]))
+
+
