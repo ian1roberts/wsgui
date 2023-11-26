@@ -65,18 +65,23 @@ class MainWindow(QMainWindow):
         self.create_buttons()
         self.gen_mainview()
 
-        # Mouse selected Letter
+        # Detects a letter being selected
+        # Action is only one a changed letter
         self._value = ""
-        self.valueChanged.connect(
-            lambda alpha: self.make_word_area.add_letter(alpha))
         self.letter_area.view.mouseOverWidget.connect(
             lambda x: self.change_value(x.alpha)
         )
+
+        # Adds the selected letter to the make word area
+        # Chains to the previous signal
+        self.valueChanged.connect(
+            lambda alpha: self.make_word_area.add_letter(alpha))
+
+        # Clears any highlighted blue letters
         self.letter_area.view.clearHighlight.connect(
             self.letter_area.deselect)
-        self.letter_area.view.mouseOverWidget.connect(
-            lambda x: self.letter_area.draw_path(x)
-        )
+
+        # Releasing moues button clears the green path
         self.letter_area.view.mouseReleaseProc.connect(
             lambda x: [
                 self.letter_area.scene.removeItem(y.path_item)

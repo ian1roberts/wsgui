@@ -22,3 +22,8 @@ class MakeWordArea(LetterArea):
         self.scene.addItem(letter)
         self.word += alpha
        # self.update()
+
+    def clear(self):
+        self.scene.clear()
+        self.word = ""
+    

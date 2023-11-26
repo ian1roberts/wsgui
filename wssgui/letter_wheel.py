@@ -56,17 +56,24 @@ class LetterAreaView(QGraphicsView):
         self.has_highlighted = False
 
     def mousePressEvent(self, event):
+        # Reset the wheel if a word has been highlighted
         if self.has_highlighted:
             self.has_highlighted = False
             self.clearHighlight.emit(True)
+            self.mouse_pressed = False
             return
 
+        # Collect letters for a word
+        # Paint a path between them, and emit the letter
         self.mouse_pressed = True
         widget = self.itemAt(event.pos())
         if isinstance(widget, MyQGPixmapItem):
+            # First letter in the word only
             self.paint_path = QPainterPath()
             self.paint_path.moveTo(widget.offset_xy)
             if widget and widget not in self.selected_widgets:
+                # New word, so force a clear
+                self.selected_widgets.clear()
                 self.selected_widgets.add(widget)
                 self.mouseOverWidget.emit(widget)
 
@@ -75,20 +82,28 @@ class LetterAreaView(QGraphicsView):
             widget = self.itemAt(event.pos())
             if isinstance(widget, MyQGPixmapItem):
                 if widget and widget not in self.selected_widgets:
+                    # Draw a path between the letters
+                    # Emit the letter, and add it to the set
+                    # Attach the path to the widget
                     self.paint_path.lineTo(widget.offset_xy)
                     widget.path_item = QGraphicsPathItem(self.paint_path)
                     widget.path_item.setPen(QPen(Qt.green, 3))
+                    self.scene().addItem(widget.path_item)
                     self.selected_widgets.add(widget)
                     self.mouseOverWidget.emit(widget)
 
     def mouseReleaseEvent(self, event):
-        if self.paint_path:
+        if isinstance(self.paint_path, QPainterPath):
             self.paint_path.closeSubpath()
-            self.paint_path = False
-        print(f"Mouse released: {[str(x) for x in self.selected_widgets]}")
-        self.mouseReleaseProc.emit(list(self.selected_widgets))
+        # self.mouseReleaseProc.emit(list(self.selected_widgets))
+        for item in self.scene().items():
+            if isinstance(item, QGraphicsPathItem):
+                if item.pen().color() == Qt.green:
+                    self.scene().removeItem(item)
+        # Reset status variables
         self.selected_widgets.clear()
         self.mouse_pressed = False
+        self.paint_path = False
 
 
 class LetterArea(QWidget):
@@ -185,10 +200,6 @@ class LetterArea(QWidget):
         self.last_path_highlighted = path_item
         self.view.has_highlighted = True
 
-    def clear(self):
-        self.scene.clear()
-        self.last_path_highlighted = False
-
     def deselect(self):
         if self.last_path_highlighted:
             self.scene.removeItem(self.last_path_highlighted)
@@ -198,6 +209,7 @@ class LetterArea(QWidget):
         print(f"Current word: {widget.alpha}")
         print(" ".join([x.alpha for x in list(self.view.selected_widgets)]))
 
-    def draw_path(self, widget):
-        if widget.path_item:
-            self.scene.addItem(widget.path_item)
+
+    def print_scene_items(self):
+        for item in self.scene.items():
+            print(item)
