@@ -1,6 +1,9 @@
 import sys
+
 from PySide6.QtWidgets import QApplication
+
 from wssgui.main_window import MainWindow
+
 
 def main(xargs):
     app = QApplication(xargs)
