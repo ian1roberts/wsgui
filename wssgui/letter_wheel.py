@@ -219,4 +219,3 @@ class LetterArea(QWidget):
     def valid_word(self, widget):
         print(f"Current word: {widget.alpha}")
         print(" ".join([x.alpha for x in self.view.selected_widgets_list]))
-

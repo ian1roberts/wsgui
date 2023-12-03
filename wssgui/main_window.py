@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         self.create_word_view_panel()
         self.create_make_word_panel()
         self.create_buttons()
+        self.create_score_panel()
         self.gen_mainview()
 
         # Detects a letter being selected
@@ -88,7 +89,7 @@ class MainWindow(QMainWindow):
     def value(self):
         return self._value
 
-    @value.setter
+    @value.setter #type: ignore
     def value(self, new_value):
         if self._value != new_value:
             self._value = new_value
@@ -96,7 +97,6 @@ class MainWindow(QMainWindow):
 
     def change_value(self, alpha):
         self.value = alpha
-        # self.letter_area.draw_path(alpha)
 
     def create_image_view_panel(self):
         self._image_view_box = QGroupBox("Puzzle Image")
@@ -155,6 +155,9 @@ class MainWindow(QMainWindow):
 
         self._button_box.setLayout(layout)
 
+    def create_score_panel(self):
+        self.score_box = self.word_area.score_panel
+
     def gen_menubar(self):
         file_menu = self.menuBar().addMenu("&File")
         edit_menu = self.menuBar().addMenu("&Edit")
@@ -204,6 +207,7 @@ class MainWindow(QMainWindow):
         right_vlay.addWidget(self._word_view_box, stretch=1)
         right_vlay.addWidget(self._make_word_view_box, stretch=1)
         right_vlay.addWidget(self._button_box, stretch=1)
+        right_vlay.addWidget(self.score_box, stretch=1)
         # Put main view together
         layout = QHBoxLayout(central_widget)
         layout.addLayout(left_vlay, stretch=1)
@@ -253,6 +257,7 @@ class MainWindow(QMainWindow):
         observed = ResultsParse(result.output.split("\n"))
         self.letter_area.make_word(observed.letters)
         self.word_area.create_tabs(observed.words)
+        self.word_area.create_score_panel()
         for butt in self.buttons:
             if not self.buttons[butt].isEnabled():
                 self.buttons[butt].setEnabled(True)
@@ -270,8 +275,21 @@ class MainWindow(QMainWindow):
 
     def analyse_valid_words(self, word):
         if self.word_area.is_member(word):
-            self.word_area.found_word(word)
+            hit = self.word_area.found_word(word)
+            if hit:
+                x = len(word)
+                y = self.word_area.update_score(x - 3)
+                print(x, y)
+                self.update_score(x, y)
         self.make_word_area.clear()
+
+    def update_score(self, letter_words, found_words):
+        panel = self.score_box.layout()
+        for i in range(panel.count()):
+            row = panel.itemAt(i).layout()
+            if row.itemAt(0).widget().text().startswith(f"{letter_words}"):
+                row.itemAt(1).widget().setText(f"{found_words:>2}")
+
 
     def help_about(self):
         pass
