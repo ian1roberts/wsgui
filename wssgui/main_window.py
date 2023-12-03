@@ -74,19 +74,14 @@ class MainWindow(QMainWindow):
 
         # Adds the selected letter to the make word area
         # Chains to the previous signal
-        self.valueChanged.connect(
-            lambda alpha: self.make_word_area.add_letter(alpha))
+        self.valueChanged.connect(lambda alpha: self.make_word_area.add_letter(alpha))
 
         # Clears any highlighted blue letters
-        self.letter_area.view.clearHighlight.connect(
-            self.letter_area.deselect)
+        self.letter_area.view.clearHighlight.connect(self.letter_area.deselect)
 
         # Releasing moues button clears the green path
         self.letter_area.view.mouseReleaseProc.connect(
-            lambda x: [
-                self.letter_area.scene.removeItem(y.path_item)
-                    for y in x if y.path_item
-            ]
+            lambda word: self.analyse_valid_words(word)
         )
 
     @Property(str, notify=valueChanged)
@@ -237,6 +232,7 @@ class MainWindow(QMainWindow):
             self.image_area.container.show()
             self.image_file_name = file_name
             self.buttons["Analyse"].setEnabled(True)
+            self.analyse_calculate()
         else:
             self.close()
 
@@ -261,6 +257,8 @@ class MainWindow(QMainWindow):
             if not self.buttons[butt].isEnabled():
                 self.buttons[butt].setEnabled(True)
 
+        self.word_data = observed
+
     def analyse_display(self):
         idx = self.word_area.currentIndex()
         if idx < 0:
@@ -269,6 +267,11 @@ class MainWindow(QMainWindow):
         if cur_word:
             self.gen_statusbar(cur_word)
             self.letter_area.word_path(cur_word)
+
+    def analyse_valid_words(self, word):
+        if self.word_area.is_member(word):
+            self.word_area.found_word(word)
+        self.make_word_area.clear()
 
     def help_about(self):
         pass

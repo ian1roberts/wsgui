@@ -5,8 +5,13 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont  # type: ignore
 from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QImage, QPainterPath, QPen, QPixmap
-from PySide6.QtWidgets import (QGraphicsPathItem, QGraphicsPixmapItem,
-                               QGraphicsScene, QGraphicsView, QWidget)
+from PySide6.QtWidgets import (
+    QGraphicsPathItem,
+    QGraphicsPixmapItem,
+    QGraphicsScene,
+    QGraphicsView,
+    QWidget,
+)
 
 FONT_FILE = Path("c:") / "Windows" / "Fonts" / "arial.ttf"
 
@@ -51,9 +56,10 @@ class LetterAreaView(QGraphicsView):
     def __init__(self, scene):
         super().__init__(scene)
         self.mouse_pressed = False
-        self.selected_widgets = set()
-        self.paint_path = False
+        self.selected_widgets_set = set()
+        self.selected_widgets_list = list()
         self.has_highlighted = False
+        self.paint_path = QPainterPath()
 
     def mousePressEvent(self, event):
         # Reset the wheel if a word has been highlighted
@@ -69,42 +75,47 @@ class LetterAreaView(QGraphicsView):
         widget = self.itemAt(event.pos())
         if isinstance(widget, MyQGPixmapItem):
             # First letter in the word only
-            self.paint_path = QPainterPath()
-            self.paint_path.moveTo(widget.offset_xy)
-            if widget and widget not in self.selected_widgets:
+            if widget not in self.selected_widgets_set:
                 # New word, so force a clear
-                self.selected_widgets.clear()
-                self.selected_widgets.add(widget)
+                self.paint_path.clear()
+                self.selected_widgets_set.clear()
+                self.selected_widgets_set.add(widget)
+                self.selected_widgets_list.clear()
+                self.selected_widgets_list.append(widget)
                 self.mouseOverWidget.emit(widget)
 
     def mouseMoveEvent(self, event):
         if self.mouse_pressed:
             widget = self.itemAt(event.pos())
             if isinstance(widget, MyQGPixmapItem):
-                if widget and widget not in self.selected_widgets:
-                    # Draw a path between the letters
-                    # Emit the letter, and add it to the set
-                    # Attach the path to the widget
-                    self.paint_path.lineTo(widget.offset_xy)
-                    widget.path_item = QGraphicsPathItem(self.paint_path)
-                    widget.path_item.setPen(QPen(Qt.green, 3))
-                    self.scene().addItem(widget.path_item)
-                    self.selected_widgets.add(widget)
+                if widget not in self.selected_widgets_set:
+                    self.selected_widgets_list.append(widget)
+                    self.selected_widgets_set.add(widget)
                     self.mouseOverWidget.emit(widget)
 
+            if len(self.selected_widgets_list) > 1:
+                for i, item in enumerate(self.selected_widgets_list):
+                    if i == 0:
+                        self.paint_path.moveTo(item.offset_xy)
+                    else:
+                        self.paint_path.lineTo(item.offset_xy)
+                item.path_item = QGraphicsPathItem(self.paint_path)
+                item.path_item.setPen(QPen(Qt.green, 3))
+                self.scene().addItem(item.path_item)
+
     def mouseReleaseEvent(self, event):
-        if isinstance(self.paint_path, QPainterPath):
-            self.paint_path.closeSubpath()
-        # self.mouseReleaseProc.emit(list(self.selected_widgets))
         for item in self.scene().items():
             if isinstance(item, QGraphicsPathItem):
                 if item.pen().color() == Qt.green:
                     self.scene().removeItem(item)
         # Reset status variables
-        self.selected_widgets.clear()
+        word = "".join(
+            [x.alpha for x in self.selected_widgets_list])
+        self.mouseReleaseProc.emit(word)
+        self.selected_widgets_set.clear()
+        self.selected_widgets_list.clear()
         self.mouse_pressed = False
-        self.paint_path = False
-
+        self.paint_path.clear()
 
 class LetterArea(QWidget):
     def __init__(self):
@@ -207,9 +218,5 @@ class LetterArea(QWidget):
 
     def valid_word(self, widget):
         print(f"Current word: {widget.alpha}")
-        print(" ".join([x.alpha for x in list(self.view.selected_widgets)]))
+        print(" ".join([x.alpha for x in self.view.selected_widgets_list]))
 
-
-    def print_scene_items(self):
-        for item in self.scene.items():
-            print(item)
