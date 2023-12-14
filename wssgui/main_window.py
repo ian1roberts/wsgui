@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    QMessageBox
 )
 from wordscapesolver.cli.solveit import solveit  # type: ignore
 
@@ -18,6 +19,7 @@ from wssgui.imageview import ImageArea
 from wssgui.letter_wheel import LetterArea
 from wssgui.make_words import MakeWordArea
 from wssgui.wordview import WordArea
+from wssgui.timer import TimerWidget
 
 
 class ResultsParse(object):
@@ -64,6 +66,7 @@ class MainWindow(QMainWindow):
         self.create_make_word_panel()
         self.create_buttons()
         self.create_score_panel()
+        self.create_timer_view_panel(10, 60000)
         self.gen_mainview()
 
         # Detects a letter being selected
@@ -84,6 +87,10 @@ class MainWindow(QMainWindow):
         self.letter_area.view.mouseReleaseProc.connect(
             lambda word: self.analyse_valid_words(word)
         )
+
+        # Timer has reached the target
+        self.timer_area.timer_timeout.connect(
+            self.game_over)
 
     @Property(str, notify=valueChanged)
     def value(self):
@@ -126,6 +133,13 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.word_area)
         self._word_view_box.setLayout(layout)
 
+    def create_timer_view_panel(self, target, interval):
+        self._timer_view_box = QGroupBox("Timer")
+        layout = QVBoxLayout()
+        self.timer_area = TimerWidget(target, interval)
+        layout.addWidget(self.timer_area)
+        self._timer_view_box.setLayout(layout)
+
     def create_buttons(self):
         self._button_box = QGroupBox("Controls")
         layout = QGridLayout()
@@ -156,7 +170,10 @@ class MainWindow(QMainWindow):
         self._button_box.setLayout(layout)
 
     def create_score_panel(self):
-        self.score_box = self.word_area.score_panel
+        self._score_view_box = QGroupBox("Score")
+        layout = QVBoxLayout()
+        layout.addWidget(self.word_area.score_panel)
+        self._score_view_box.setLayout(layout)
 
     def gen_menubar(self):
         file_menu = self.menuBar().addMenu("&File")
@@ -204,10 +221,13 @@ class MainWindow(QMainWindow):
         left_vlay.addWidget(self._letter_view_box, stretch=1)
         # Combine Found Words and Buttons
         right_vlay = QVBoxLayout()
+        right_hlay = QHBoxLayout()
         right_vlay.addWidget(self._word_view_box, stretch=1)
         right_vlay.addWidget(self._make_word_view_box, stretch=1)
+        right_hlay.addWidget(self._timer_view_box, stretch=1)
+        right_hlay.addWidget(self._score_view_box, stretch=1)
+        right_vlay.addLayout(right_hlay)
         right_vlay.addWidget(self._button_box, stretch=1)
-        right_vlay.addWidget(self.score_box, stretch=1)
         # Put main view together
         layout = QHBoxLayout(central_widget)
         layout.addLayout(left_vlay, stretch=1)
@@ -215,6 +235,17 @@ class MainWindow(QMainWindow):
 
     def gen_statusbar(self, txt="Ready"):
         self.status = self.statusBar().showMessage(txt)
+
+    def game_over(self):
+        msg_box = QMessageBox()
+        msg_box.setText("Time's up!")
+        msg_box.setInformativeText("Do you want to play again?")
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        result = msg_box.exec()
+
+        if result == QMessageBox.Yes:
+            self.file_load_image()
+
 
     def file_save_image(self):
         pass
@@ -225,7 +256,7 @@ class MainWindow(QMainWindow):
                 if i > 0 and i < 4:
                     butt.setEnabled(False)
             self.image_area.reset()
-            self.letter_area.clear()
+            self.letter_area.deselect()
             self.word_area.clear()
 
         file_name, _ = QFileDialog.getOpenFileName(
@@ -237,6 +268,7 @@ class MainWindow(QMainWindow):
             self.image_file_name = file_name
             self.buttons["Analyse"].setEnabled(True)
             self.analyse_calculate()
+            self.timer_area.start_timer()
         else:
             self.close()
 
@@ -277,19 +309,23 @@ class MainWindow(QMainWindow):
         if self.word_area.is_member(word):
             hit = self.word_area.found_word(word)
             if hit:
-                x = len(word)
-                y = self.word_area.update_score(x - 3)
-                print(x, y)
-                self.update_score(x, y)
+                nletters = len(word)
+                hits = self.word_area.update_score(nletters - 3)
+                self.update_score(nletters, hits)
         self.make_word_area.clear()
 
     def update_score(self, letter_words, found_words):
-        panel = self.score_box.layout()
+        panel = self.word_area.score_panel.layout()
         for i in range(panel.count()):
-            row = panel.itemAt(i).layout()
+            row = panel.itemAt(i)
             if row.itemAt(0).widget().text().startswith(f"{letter_words}"):
                 row.itemAt(1).widget().setText(f"{found_words:>2}")
-
+                max_words = int(row.itemAt(2).widget().text().split(" ")[-2])
+                if int(found_words) == max_words:
+                    for i in range(row.count()):
+                        widget = row.itemAt(i).widget()
+                        if widget is not None:
+                            widget.setStyleSheet("color: green;")
 
     def help_about(self):
         pass

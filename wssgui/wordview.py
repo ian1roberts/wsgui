@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -16,6 +16,11 @@ class WordArea(QTabWidget):
         self.words_set: set = set()
         self.scoring: dict = dict()
         self.score_panel = QFrame()
+        self.timer = QTimer()
+
+    @property
+    def nwords(self):
+        return len(self.words_set)
 
     def create_tabs(self, all_words):
         for i, (k, words) in enumerate(all_words.items()):
@@ -80,7 +85,6 @@ class WordArea(QTabWidget):
                 label = widget.itemAt(1).widget()
                 button = widget.itemAt(0).widget()
                 if label.text() == word:
-                    print(f"Found {word} & setting style")
                     label.setStyleSheet("color: green")
                     button.setEnabled(True)
                     return True
