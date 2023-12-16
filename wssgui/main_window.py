@@ -66,11 +66,11 @@ class MainWindow(QMainWindow):
         self.create_make_word_panel()
         self.create_buttons()
         self.create_score_panel()
-        self.create_timer_view_panel(10, 60000)
+        self.create_timer_view_panel(10, 10000)
         self.gen_mainview()
 
         # Detects a letter being selected
-        # Action is only one a changed letter
+        # Action is only on a changed letter
         self._value = ""
         self.letter_area.view.mouseOverWidget.connect(
             lambda x: self.change_value(x.alpha)
@@ -83,14 +83,13 @@ class MainWindow(QMainWindow):
         # Clears any highlighted blue letters
         self.letter_area.view.clearHighlight.connect(self.letter_area.deselect)
 
-        # Releasing moues button clears the green path
+        # Releasing mouse button clears the green path
         self.letter_area.view.mouseReleaseProc.connect(
             lambda word: self.analyse_valid_words(word)
         )
 
         # Timer has reached the target
-        self.timer_area.timer_timeout.connect(
-            self.game_over)
+        self.timer_area.timer_timeout.connect(lambda x: self.game_over(x))
 
     @Property(str, notify=valueChanged)
     def value(self):
@@ -236,16 +235,21 @@ class MainWindow(QMainWindow):
     def gen_statusbar(self, txt="Ready"):
         self.status = self.statusBar().showMessage(txt)
 
-    def game_over(self):
+    def game_over(self, loser):
         msg_box = QMessageBox()
-        msg_box.setText("Time's up!")
+        if loser:
+            msg_box.setText("Time's up!")
+        else:
+            msg_box.setText("You win!")
+
         msg_box.setInformativeText("Do you want to play again?")
         msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         result = msg_box.exec()
 
         if result == QMessageBox.Yes:
             self.file_load_image()
-
+        else:
+            self.close()
 
     def file_save_image(self):
         pass
@@ -316,8 +320,14 @@ class MainWindow(QMainWindow):
 
     def update_score(self, letter_words, found_words):
         panel = self.word_area.score_panel.layout()
+
+        if panel is None:
+            return
+
         for i in range(panel.count()):
-            row = panel.itemAt(i)
+            row = panel.itemAt(i).layout()
+            if row is None:
+                continue
             if row.itemAt(0).widget().text().startswith(f"{letter_words}"):
                 row.itemAt(1).widget().setText(f"{found_words:>2}")
                 max_words = int(row.itemAt(2).widget().text().split(" ")[-2])
@@ -326,6 +336,28 @@ class MainWindow(QMainWindow):
                         widget = row.itemAt(i).widget()
                         if widget is not None:
                             widget.setStyleSheet("color: green;")
+
+        for i in range(panel.count()):
+            widget = panel.itemAt(i).widget()
+            if (widget is not None and
+                widget.objectName() == "score"):
+                score = self.word_area.percent_score
+                widget.setText(f"{score}")
+                widget.setStyleSheet("""
+                    color: blue;
+                    font-size: 10px;
+                    font-weight: bold;
+                    text-align: center;
+                """)
+                if self.word_area.nwords == self.word_area.nfound:
+                    widget.setStyleSheet("""
+                    color: green;
+                    font-size: 12px;
+                    font-weight: bold;
+                    text-align: center;
+                """)
+                    self.timer_area.timer.stop()
+                    self.timer_area.timer_timeout.emit(False)
 
     def help_about(self):
         pass

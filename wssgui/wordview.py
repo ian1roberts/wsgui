@@ -22,12 +22,23 @@ class WordArea(QTabWidget):
     def nwords(self):
         return len(self.words_set)
 
+    @property
+    def nfound(self):
+        return sum(
+            [self.update_score(k - 3) for k in self.scoring.keys()]
+        )
+
+    @property
+    def percent_score(self):
+        return f"{self.nfound / self.nwords * 100:.1f}%"
+
     def create_tabs(self, all_words):
         for i, (k, words) in enumerate(all_words.items()):
             cur_tab = QFrame()
             cur_layout = QVBoxLayout()
             cur_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
+            found = 0
             for word in words:
                 row = QHBoxLayout()
                 word_button = QRadioButton()
@@ -43,23 +54,28 @@ class WordArea(QTabWidget):
                 )
                 cur_layout.addLayout(row)
                 self.words_set.add(word)
+                if word_button.isEnabled():
+                    found += 1
 
             cur_tab.setLayout(cur_layout)
             self.addTab(cur_tab, f"{k} letter words.")
             self.selected_word.append(QLabel(""))
-            self.scoring[k] = cur_layout.count()
+            self.scoring[k] = (cur_layout.count(), found)
 
     def create_score_panel(self):
         x = 0
         score_layout = QVBoxLayout()
         score_layout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
-        for k, v in self.scoring.items():
+        for k, (v, _) in self.scoring.items():
             row = QHBoxLayout()
             row.setAlignment(Qt.AlignTop | Qt.AlignLeft)
             row.addWidget(QLabel(f"{k} letter words: "))
             row.addWidget(QLabel(f"{x:>2}"))
             row.addWidget(QLabel(f"/ {v:>2} found."))
             score_layout.addLayout(row)
+        qscore = QLabel("Score: ")
+        qscore.setObjectName("score")
+        score_layout.addWidget(qscore)
         self.score_panel.setLayout(score_layout)
 
     def update_label(self, i, word_label, checked):
